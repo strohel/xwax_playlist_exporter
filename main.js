@@ -3,19 +3,47 @@ Importer.loadQtBinding("qt.gui");
 
 function substitute(format, track)
 {
+	var ret = new String(format);
+	var sub;
+
+	for(var i = 0; i < substitutions.length; i++) {
+		sub = substitutions[i];
+		if(format.indexOf("%" + sub) >= 0) {
+
+			// special cases:
+			if(sub == "fancyRating") {
+				var rating = "", j = track.rating;
+				for(; j >= 2; j -= 2)
+					rating += "*";
+				if(j == 1)
+					rating += ".";
+
+				ret = ret.replace("%" + sub, rating);
+
+			// standard case:
+			} else {
+				ret = ret.replace("%" + sub, track[sub]);
+			}
+
+		}
+	}
+
+	return ret;
 }
 
 function getPlaylist()
 {
 	ret = new Array();
+	var artistFormat = window.settingsGroup.artistFormatEdit.text;
+	var titleFormat = window.settingsGroup.titleFormatEdit.text;
 
 	filenames = Amarok.Playlist.filenames(); // we must fill it this time
 	for(var i = 0; i < Amarok.Playlist.totalTrackCount(); i++) {
 		var track = Amarok.Playlist.trackAt(i);
 		ret[i] = "";
 		//ret[i] += filenames[i] + "\t"; // track.url returns it urlencoded
-		ret[i] += track.artist + "\t";
-		ret[i] += track.title;
+		ret[i] += substitute(artistFormat, track) + "\t";
+		ret[i] += substitute(titleFormat, track);
 	}
 
 	return ret;
@@ -91,15 +119,14 @@ function close()
 
 function exportXwaxPlaylist()
 { try {
-	var playlist, artistFormat, titleFormat, dialogWidth, dialogHeight, lastFilename, substitutions;
+	var artistFormat, titleFormat, dialogWidth, dialogHeight, lastFilename;
 	artistFormat = Amarok.Script.readConfig("artistFormat", "%artist");
 	titleFormat = Amarok.Script.readConfig("titleFormat", "%title");
 	dialogWidth = Amarok.Script.readConfig("dialogWidth", String("650"));
 	dialogHeight = Amarok.Script.readConfig("dialogHeight", String("550"));
 	lastFilename = Amarok.Script.readConfig("lastFilename", "");
 
-	substitutions = ["artist", "title", "album", "track", "year", "genre", "rating", "bpm"];
-	playlist = getPlaylist(); // this call must be AFTER previous ones
+	substitutions = ["artist", "title", "album", "trackNumber", "discNumber", "year", "genre", "composer", "bitrate", "score", "rating", "fancyRating", "playCount", "bpm", "comment", "path"];
 
 
 	var layout = new QVBoxLayout();
@@ -116,15 +143,18 @@ function exportXwaxPlaylist()
 	settingsLayout.addWidget(label, 0, 0);
 	var artistFormatEdit = new QLineEdit(artistFormat);
 	artistFormatEdit.objectName = "artistFormatEdit";
+	artistFormatEdit.editingFinished.connect(fillTextEditWithPlaylist);
 	settingsLayout.addWidget(artistFormatEdit, 0, 1);
 	label = new QLabel("Title format:");
 	label.alignment = new Qt.Alignment(Qt.AlignRight | Qt.AlignVCenter);
 	settingsLayout.addWidget(label, 0, 2);
 	var titleFormatEdit = new QLineEdit(titleFormat);
 	titleFormatEdit.objectName = "titleFormatEdit";
+	titleFormatEdit.editingFinished.connect(fillTextEditWithPlaylist);
 	settingsLayout.addWidget(titleFormatEdit, 0, 3);
 
-	settingsLayout.addWidget(new QLabel("<i>Available substitutions: %" + substitutions.join(", %") + ".</i>"), 1, 0, 1, 4);
+	label = new QLabel("<i>Available substitutions: %" + substitutions.join(", %") + ".</i>");
+	settingsLayout.addWidget(label, 1, 0, 1, 4);
 
 	settingsLayout.addWidget(new QLabel("Filesystem charset:"), 2, 0);
 	settingsLayout.addWidget(new QLineEdit("UTF-8"), 2, 1);
@@ -161,7 +191,6 @@ function exportXwaxPlaylist()
 	saveToLayout.addWidget(saveToLineEdit, 0, 1);
 	var selectFilenameButton = new QPushButton(QIcon.fromTheme("document-open"), "");
 	selectFilenameButton.clicked.connect(selectFilename);
-	Amarok.alert(selectFilenameButton.sizePolicy);
 	saveToLayout.addWidget(selectFilenameButton, 0, 3);
 	saveToLayout.addWidget(new QLabel("<i>The file will be overwritten without asking.</i>"), 1, 1);
 
@@ -195,7 +224,7 @@ function exportXwaxPlaylist()
 }
 }
 
-var window, filenames;
+var window, filenames, substitutions;
 
 if ( Amarok.Window.addToolsMenu("export_xwax_playlist", "Export playlist for xwax", "preferences-desktop-sound") ) {
 	Amarok.Window.ToolsMenu.export_xwax_playlist['triggered()'].connect(exportXwaxPlaylist);
