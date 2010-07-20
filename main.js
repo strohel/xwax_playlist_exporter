@@ -4,7 +4,9 @@ Importer.loadQtBinding("qt.gui");
 function substitute(format, track)
 {
 	var ret = new String(format);
-	var sub;
+	var sub, value;
+	var pad2 = ["trackNumber"];
+	var pad3 = ["bpm"];
 
 	for(var i = 0; i < substitutions.length; i++) {
 		sub = substitutions[i];
@@ -12,17 +14,26 @@ function substitute(format, track)
 
 			// special cases:
 			if(sub == "fancyRating") {
-				var rating = "", j = track.rating;
+				value = "";
+				var j = track.rating;
 				for(; j >= 2; j -= 2)
-					rating += "*";
+					value += "*";
 				if(j == 1)
-					rating += ".";
-
-				ret = ret.replace("%" + sub, rating);
+					value += ".";
+				ret = ret.replace("%" + sub, value);
 
 			// standard case:
 			} else {
-				ret = ret.replace("%" + sub, track[sub]);
+				value = String(track[sub]);
+				var padTo = 0;
+				if(pad2.indexOf(sub) >= 0) // values padded to 2 chars
+					padTo = 2;
+				if(pad3.indexOf(sub) >= 0) // values padded to 3 chars
+					padTo = 3;
+				while(value.length < padTo) {
+					value = "0" + value;
+				}
+				ret = ret.replace("%" + sub, value);
 			}
 
 		}
@@ -65,7 +76,8 @@ function saveConfig()
 
 function selectFilename()
 {
-	var filename = QFileDialog.getSaveFileName(this, "Save xwax Playlist As", "", "", "", 0);
+	var filename = window.saveToLine.saveToLineEdit.text;
+	filename = QFileDialog.getSaveFileName(this, "Save xwax Playlist As", filename, "", "", QFileDialog.DontConfirmOverwrite);
 	window.saveToLine.saveToLineEdit.text = filename;
 }
 
@@ -137,29 +149,37 @@ function exportXwaxPlaylist()
 
 	var settingsLayout = new QGridLayout();
 	settingsGroup.setLayout(settingsLayout);
+	settingsLayout.setColumnStretch(1, 1);
+	settingsLayout.setColumnStretch(3, 2);
 
-	var label = new QLabel("Artist format:");
-	label.alignment = new Qt.Alignment(Qt.AlignRight | Qt.AlignVCenter);
-	settingsLayout.addWidget(label, 0, 0);
+	var tooltip = "Available substitutions: <b>%" + substitutions.join("</b>, <b>%") + "</b>";
+	var temp = new QLabel("Artist format:");
+	temp.alignment = new Qt.Alignment(Qt.AlignRight | Qt.AlignVCenter);
+	settingsLayout.addWidget(temp, 0, 0);
 	var artistFormatEdit = new QLineEdit(artistFormat);
 	artistFormatEdit.objectName = "artistFormatEdit";
 	artistFormatEdit.editingFinished.connect(fillTextEditWithPlaylist);
+	artistFormatEdit.toolTip = tooltip;
 	settingsLayout.addWidget(artistFormatEdit, 0, 1);
-	label = new QLabel("Title format:");
-	label.alignment = new Qt.Alignment(Qt.AlignRight | Qt.AlignVCenter);
-	settingsLayout.addWidget(label, 0, 2);
+	temp = new QLabel("Title format:");
+	temp.alignment = new Qt.Alignment(Qt.AlignRight | Qt.AlignVCenter);
+	settingsLayout.addWidget(temp, 0, 2);
 	var titleFormatEdit = new QLineEdit(titleFormat);
 	titleFormatEdit.objectName = "titleFormatEdit";
 	titleFormatEdit.editingFinished.connect(fillTextEditWithPlaylist);
+	titleFormatEdit.toolTip = tooltip;
 	settingsLayout.addWidget(titleFormatEdit, 0, 3);
 
-	label = new QLabel("<i>Available substitutions: %" + substitutions.join(", %") + ".</i>");
-	settingsLayout.addWidget(label, 1, 0, 1, 4);
-
-	settingsLayout.addWidget(new QLabel("Filesystem charset:"), 2, 0);
-	settingsLayout.addWidget(new QLineEdit("UTF-8"), 2, 1);
-	settingsLayout.addWidget(new QLabel("Display charset:"), 2, 2);
-	settingsLayout.addWidget(new QLineEdit("UTF-8"), 2, 3);
+	settingsLayout.addWidget(new QLabel("Filesystem charset:"), 1, 0);
+	temp = new QLineEdit("UTF-8");
+	temp.objectName = "filesystemCharset";
+	temp.enabled = false;
+	settingsLayout.addWidget(temp, 1, 1);
+	settingsLayout.addWidget(new QLabel("Display charset:"), 1, 2);
+	temp = new QLineEdit("UTF-8");
+	temp.objectName = "displayCharset";
+	temp.enabled = false;
+	settingsLayout.addWidget(temp, 1, 3);
 
 
 	var playlistGroup = new QGroupBox("Playlist Preview");
@@ -203,7 +223,7 @@ function exportXwaxPlaylist()
 
 	bottomLayout.addStretch(0);
 	var saveButton = new QPushButton(QIcon.fromTheme("document-save"), "Save");
-	//saveButton.default = true; // invalid in javascript?s
+	saveButton["default"] = true;
 	saveButton.clicked.connect(save);
 	bottomLayout.addWidget(saveButton, 0, 0);
 	var cancelButton = new QPushButton(QIcon.fromTheme("dialog-cancel"), "Cancel");
