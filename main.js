@@ -104,12 +104,18 @@ function save()
 	file.resize(0); // truncate file
 
 	var textStream = new QTextStream(file);
+	var filesystemCodec = QTextCodec.codecForName(new QByteArray(window.settingsGroup.filesystemCharset.text));
+	var displayCodec = QTextCodec.codecForName(new QByteArray(window.settingsGroup.displayCharset.currentText));
 	for(var i = 0; i < filenames.length; i++) {
-		/// TODO: encodings
+		textStream.setCodec(filesystemCodec);
 		textStream.writeString(filenames[i]);
 		textStream.writeString("\t");
+		textStream.flush(); // otherwise codec could be skipped
+
+		textStream.setCodec(displayCodec);
 		textStream.writeString(playlist[i]);
 		textStream.writeString("\n");
+		textStream.flush();
 	}
 
 	file.close();
@@ -129,14 +135,24 @@ function close()
 }
 }
 
+QByteArray.prototype.toString = function() // this is a redefinition. Original: { return "QByteArray" }
+{
+	var ret = "";
+	for(var i = 0; i < this.length(); i++) {
+		ret += String.fromCharCode(this.at(i));
+	}
+	return ret;
+}
+
 function exportXwaxPlaylist()
 { try {
-	var artistFormat, titleFormat, dialogWidth, dialogHeight, lastFilename;
+	var artistFormat, titleFormat, dialogWidth, dialogHeight, lastFilename, localeCodec;
 	artistFormat = Amarok.Script.readConfig("artistFormat", "%artist");
 	titleFormat = Amarok.Script.readConfig("titleFormat", "%title");
 	dialogWidth = Amarok.Script.readConfig("dialogWidth", String("650"));
 	dialogHeight = Amarok.Script.readConfig("dialogHeight", String("550"));
 	lastFilename = Amarok.Script.readConfig("lastFilename", "");
+	localeCodec = QTextCodec.codecForLocale().name().toString();
 
 	substitutions = ["artist", "title", "album", "trackNumber", "discNumber", "year", "genre", "composer", "bitrate", "score", "rating", "fancyRating", "playCount", "bpm", "comment", "path"];
 
@@ -171,14 +187,19 @@ function exportXwaxPlaylist()
 	settingsLayout.addWidget(titleFormatEdit, 0, 3);
 
 	settingsLayout.addWidget(new QLabel("Filesystem charset:"), 1, 0);
-	temp = new QLineEdit("UTF-8");
+	temp = new QLineEdit(localeCodec);
 	temp.objectName = "filesystemCharset";
 	temp.enabled = false;
+	temp.toolTip = "Autodetected from locale.<br><br>xwax is charset-agnoistic when it comes to " +
+	               "filenames, but Amarok translates filenames to unicode, so we need to translate " +
+	               "them back, assuming Amarok used current locale in the first place."
 	settingsLayout.addWidget(temp, 1, 1);
 	settingsLayout.addWidget(new QLabel("Display charset:"), 1, 2);
-	temp = new QLineEdit("UTF-8");
+	temp = new QComboBox();
 	temp.objectName = "displayCharset";
-	temp.enabled = false;
+	temp.addItems(["UTF-8", "ISO 8859-1"]);
+	temp.toolTip = "xwax (as of 0.7) uses <b>ISO 8859-1</b> charset to display artist and title, " +
+	               "but patched versions exist that can display UTF-8 fields.";
 	settingsLayout.addWidget(temp, 1, 3);
 
 
