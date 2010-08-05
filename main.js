@@ -72,6 +72,7 @@ function saveConfig()
 	Amarok.Script.writeConfig("dialogWidth", String(window.width));
 	Amarok.Script.writeConfig("dialogHeight", String(window.height));
 	Amarok.Script.writeConfig("lastFilename", window.saveToLine.saveToLineEdit.text);
+	Amarok.Script.writeConfig("displayCharset", window.settingsGroup.displayCharset.currentText);
 }
 
 function selectFilename()
@@ -146,13 +147,13 @@ QByteArray.prototype.toString = function() // this is a redefinition. Original: 
 
 function exportXwaxPlaylist()
 { try {
-	var artistFormat, titleFormat, dialogWidth, dialogHeight, lastFilename, localeCodec;
-	artistFormat = Amarok.Script.readConfig("artistFormat", "%artist");
-	titleFormat = Amarok.Script.readConfig("titleFormat", "%title");
-	dialogWidth = Amarok.Script.readConfig("dialogWidth", String("650"));
-	dialogHeight = Amarok.Script.readConfig("dialogHeight", String("550"));
-	lastFilename = Amarok.Script.readConfig("lastFilename", "");
-	localeCodec = QTextCodec.codecForLocale().name().toString();
+	var artistFormat = Amarok.Script.readConfig("artistFormat", "%artist");
+	var titleFormat = Amarok.Script.readConfig("titleFormat", "%title");
+	var dialogWidth = Amarok.Script.readConfig("dialogWidth", String("650"));
+	var dialogHeight = Amarok.Script.readConfig("dialogHeight", String("550"));
+	var lastFilename = Amarok.Script.readConfig("lastFilename", "");
+	var filesystemCharset = QTextCodec.codecForLocale().name().toString();
+	var displayCharset = Amarok.Script.readConfig("displayCharset", "ISO 8859-1");
 
 	substitutions = ["artist", "title", "album", "trackNumber", "discNumber", "year", "genre", "composer", "bitrate", "score", "rating", "fancyRating", "playCount", "bpm", "comment", "path"];
 
@@ -187,7 +188,7 @@ function exportXwaxPlaylist()
 	settingsLayout.addWidget(titleFormatEdit, 0, 3);
 
 	settingsLayout.addWidget(new QLabel("Filesystem charset:"), 1, 0);
-	temp = new QLineEdit(localeCodec);
+	temp = new QLineEdit(filesystemCharset);
 	temp.objectName = "filesystemCharset";
 	temp.enabled = false;
 	temp.toolTip = "Autodetected from locale.<br><br>xwax is charset-agnoistic when it comes to " +
@@ -197,9 +198,10 @@ function exportXwaxPlaylist()
 	settingsLayout.addWidget(new QLabel("Display charset:"), 1, 2);
 	temp = new QComboBox();
 	temp.objectName = "displayCharset";
-	temp.addItems(["UTF-8", "ISO 8859-1"]);
+	temp.addItems(["ISO 8859-1", "UTF-8"]);
+	temp.setCurrentIndex(temp.findText(displayCharset));
 	temp.toolTip = "xwax (as of 0.7) uses <b>ISO 8859-1</b> charset to display artist and title, " +
-	               "but patched versions exist that can display UTF-8 fields.";
+	               "but patched versions exist that can display <b>UTF-8</b> fields.";
 	settingsLayout.addWidget(temp, 1, 3);
 
 
