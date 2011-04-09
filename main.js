@@ -136,6 +136,15 @@ function close()
 }
 }
 
+function createPushButton(icon, text, fallbackText)
+{
+	// QIcon.fromTheme was introduced in Qt 4.6, this provides compatibility for 4.5
+	if(QIcon.fromTheme != undefined)
+		return new QPushButton(QIcon.fromTheme(icon), text);
+	else
+		return new QPushButton(fallbackText);
+}
+
 QByteArray.prototype.toString = function() // this is a redefinition. Original: { return "QByteArray" }
 {
 	var ret = "";
@@ -232,7 +241,7 @@ function exportXwaxPlaylist()
 	saveToLineEdit = new QLineEdit(lastFilename);
 	saveToLineEdit.objectName = "saveToLineEdit";
 	saveToLayout.addWidget(saveToLineEdit, 0, 1);
-	var selectFilenameButton = new QPushButton(QIcon.fromTheme("document-open"), "");
+	var selectFilenameButton = createPushButton("document-open", "", "Browse");
 	selectFilenameButton.clicked.connect(selectFilename);
 	saveToLayout.addWidget(selectFilenameButton, 0, 3);
 	saveToLayout.addWidget(new QLabel("<i>The file will be overwritten without asking.</i>"), 1, 1);
@@ -245,11 +254,11 @@ function exportXwaxPlaylist()
 	bottomLine.setLayout(bottomLayout);
 
 	bottomLayout.addStretch(0);
-	var saveButton = new QPushButton(QIcon.fromTheme("document-save"), "Save");
+	var saveButton = createPushButton("document-save", "Save", "Save");
 	saveButton["default"] = true;
 	saveButton.clicked.connect(save);
 	bottomLayout.addWidget(saveButton, 0, 0);
-	var cancelButton = new QPushButton(QIcon.fromTheme("dialog-cancel"), "Cancel");
+	var cancelButton = createPushButton("dialog-cancel", "Cancel", "Cancel");
 	cancelButton.clicked.connect(close);
 	bottomLayout.addWidget(cancelButton, 0, 0);
 
